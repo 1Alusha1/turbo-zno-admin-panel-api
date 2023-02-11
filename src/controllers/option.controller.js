@@ -49,6 +49,16 @@ module.exports.createTeacherGroup = async (req, res) => {
   }
 };
 
+let res;
+const checkSubGroup = (mainGroup, subGroupName) => {
+  if (mainGroup.subGroup !== null) {
+    res = mainGroup.subGroup.find((item) => item.groupName === subGroupName);
+  } else {
+    return false;
+  }
+  return res;
+};
+
 module.exports.createTeacherSubGroup = async (req, res) => {
   try {
     const { teacherName, groupName, subGroupName } = req.body;
@@ -84,12 +94,7 @@ module.exports.createTeacherSubGroup = async (req, res) => {
         groupName,
       }).save();
     }
-
-    const g = mainGroup.subGroup.find(
-      (item) => item.groupName === subGroupName
-    );
-    // g бросает нал и проваливаеться, под группу создает - пофиксить
-    if (!g) {
+    if (!checkSubGroup(mainGroup, subGroupName)) {
       MainGroup.findOneAndUpdate(
         { groupName },
         {
@@ -150,9 +155,11 @@ module.exports.getAllGroups = async (req, res) => {
   try {
     let groups = await Groups.find();
 
-    res
-      .status(200)
-      .json({ type: 'success', message: 'Список груп успішно отримано', groups });
+    res.status(200).json({
+      type: 'success',
+      message: 'Список груп успішно отримано',
+      groups,
+    });
   } catch (err) {
     if (err) console.log(err);
     res.status(500).json({
@@ -278,6 +285,27 @@ module.exports.renameGroup = async (req, res) => {
     res.status(500).json({
       type: 'error',
       message: 'Сталася помилка при перейменуванні групи',
+    });
+  }
+};
+
+module.exports.getGroup = async (req, res) => {
+  const { _id } = req.params;
+  try {
+    const group = await Groups.findOne({ _id });
+
+    if (!group) {
+      return res
+        .status(404)
+        .json({ type: 'error', message: 'Такої групи не існує' });
+    }
+
+    res.status(200).json(group);
+  } catch (err) {
+    if (err) console.log(err);
+    res.status(500).json({
+      type: 'error',
+      message: 'Сталася помилка при отриманні групи',
     });
   }
 };

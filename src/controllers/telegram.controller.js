@@ -27,6 +27,7 @@ module.exports.sendMessageToGroup = async (req, res) => {
           `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage?chat_id=${student.student.id}&text=${message}`
         )
         .catch((err) => {
+          if (err) console.log(err);
           Student.findOneAndDelete({ id: student.student.id }, (err) => {
             if (err) console.log(err);
           });

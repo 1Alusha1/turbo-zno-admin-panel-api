@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 
 const corsOption = {
-  origin: 'https://turbozno-panel.netlify.app',
+  origin: process.env.DOMAIN,
 };
 
 app.use(cors(corsOption));

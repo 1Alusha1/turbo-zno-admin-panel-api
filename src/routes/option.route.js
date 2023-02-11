@@ -6,6 +6,7 @@ const {
   getAllGroups,
   deleteStudent,
   renameGroup,
+  getGroup,
 } = require('../controllers/option.controller');
 const router = new Router();
 const authMiddleware = require('../middleware/auth.middleware');
@@ -48,5 +49,7 @@ router.post(
   roleMiddleware(['ADMIN']),
   renameGroup
 );
+
+router.get('/get-group/:_id', getGroup);
 
 module.exports = router;
