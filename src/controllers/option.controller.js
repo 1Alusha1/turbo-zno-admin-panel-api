@@ -171,8 +171,7 @@ module.exports.getAllGroups = async (req, res) => {
 
 module.exports.deleteStudent = async (req, res) => {
   try {
-    const { id, username, groupName } = req.body;
-
+    const { id, username, group } = req.body;
     Student.findOneAndDelete({ id: id }, (err) => {
       if (err) {
         return res.status(500).json({
@@ -183,11 +182,11 @@ module.exports.deleteStudent = async (req, res) => {
     });
 
     Groups.findOneAndUpdate(
-      { groupName },
+      { groupName: group },
       {
         $pull: {
           students: {
-            student: { username: username, id: id, group: groupName },
+            student: { username: username, id: id, group: group },
           },
         },
       },
@@ -218,6 +217,8 @@ module.exports.renameGroup = async (req, res) => {
     const { groupName, newName } = req.body;
 
     const groups = await Groups.findOne({ groupName: newName });
+    const curentGroup = await Groups.findOne({ groupName });
+    const students = await Student.find({ group: groupName });
 
     if (groups) {
       return res.status(500).json({
@@ -225,28 +226,9 @@ module.exports.renameGroup = async (req, res) => {
         message: 'Така група вже існує, оберіть іншу назву',
       });
     }
-    Admin.updateOne(
-      { group: groupName },
-      { $set: { group: newName } },
-      (err) => {
-        if (err) console.log(err);
-      }
-    );
-    Groups.updateOne({ groupName }, { $set: { groupName: newName } }, (err) => {
-      if (err) console.log(err);
-    });
-
     const mainGroup = await MainGroup.findOne({
       subGroup: { $elemMatch: { groupName } },
     });
-
-    MainGroup.updateOne(
-      { groupName },
-      { $set: { groupName: newName } },
-      (err) => {
-        if (err) console.log(err);
-      }
-    );
 
     if (mainGroup && mainGroup.subGroup.length) {
       await mainGroup.updateOne({
@@ -265,7 +247,6 @@ module.exports.renameGroup = async (req, res) => {
       });
     }
 
-    const students = await Student.find({ group: groupName });
     if (students.length) {
       Student.updateMany(
         { group: groupName },
@@ -275,6 +256,46 @@ module.exports.renameGroup = async (req, res) => {
         }
       );
     }
+    Admin.updateOne(
+      { group: groupName },
+      { $set: { group: newName } },
+      (err) => {
+        if (err) console.log(err);
+      }
+    );
+    Groups.updateOne({ groupName }, { $set: { groupName: newName } }, (err) => {
+      if (err) console.log(err);
+    });
+
+    curentGroup.students.forEach(({ student }) => {
+      Groups.findOneAndUpdate(
+        { groupName },
+        {
+          $set: {
+            students: {
+              student: { ...student, group: newName },
+            },
+          },
+        },
+        { new: true },
+        (err) => {
+          if (err) {
+            return res.status(500).json({
+              message: 'Сталася помилка при виделенні студента з групи',
+              type: 'error',
+            });
+          }
+        }
+      );
+    });
+
+    MainGroup.updateOne(
+      { groupName },
+      { $set: { groupName: newName } },
+      (err) => {
+        if (err) console.log(err);
+      }
+    );
 
     res.status(200).json({
       type: 'success',
